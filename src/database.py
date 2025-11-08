@@ -16,3 +16,10 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Base class de khai bao cac model
 Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db # yield giup tao generator function
+    finally:
+        db.close()

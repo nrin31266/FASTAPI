@@ -1,7 +1,8 @@
 from typing import Generic, TypeVar, Optional
 from pydantic import BaseModel, Field
 from pydantic.generics import GenericModel  # 👈 THÊM DÒNG NÀY
-
+# import List
+from typing import List
 T = TypeVar("T")
 
 class ApiResponse(GenericModel, Generic[T]):  # 👈 ĐỔI BaseModel → GenericModel
@@ -24,9 +25,46 @@ class BlogResponse(BaseModel):
     title: str
     content: str
     published: bool
+    user_id: int
+    
+    creator: "User"
     class Config:
         from_attributes = True
+        
+class Blog(BaseModel):
+    title: str
+    content: str
+    published: bool = True
+    user_id: int  
+    class Config:
+        from_attributes = True
+
+class User(BaseModel):
+    id: int
+    username: str
+    email: str
+    class Config:
+        from_attributes = True
+
 class BlogCreateRequest(BaseModel):
     title: str
     content: str
     published: bool = True
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    email: str
+    blogs : "List[Blog]"
+
+    class Config:
+        from_attributes = True
+        
+
+class UserCreateRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+class LoginRequest(BaseModel):
+    email: str
+    password: str

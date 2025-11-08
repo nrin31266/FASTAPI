@@ -4,3 +4,16 @@ sqlalchemy==2.0.20
 psycopg2-binary==2.9.6
 passlib
 bcrypt==4.1.2
+
+# python-jose la thu vien de xu ly JWT
+python-jose[cryptography]==3.3.0
+cryptography==41.0.3
+# httpx la thu vien de gui yeu cau HTTP
+# httpx==0.23.0
+
+# python-dotenv la thu vien de doc file .env
+python-dotenv==1.0.0
+# pydantic-settings
+
+# python-multipart la thu vien de xu ly multipart/form-data
+python-multipart

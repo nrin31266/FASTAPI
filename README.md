@@ -12,3 +12,5 @@ pip install -r requirements.txt
 3. Run app
 bash
 uvicorn src.main:app --reload --port 8089
+
+

@@ -13,7 +13,7 @@ class ApiResponse(GenericModel, Generic[T]):  # 👈 ĐỔI BaseModel → Generi
     @classmethod
     def success(cls, data: Optional[T] = None, message: str = "Success"):
         """Factory method tương tự trong Java"""
-        return cls(code=200, message=message, result=data or None)
+        return cls(code=200, message=message, result=data)
 
     @classmethod
     def error(cls, code: int, message: str):

@@ -8,7 +8,7 @@ from typing import Optional
 from src.errors.base_exception import BaseException
 from src.errors.base_error_code import BaseErrorCode
 from src.utils.security import verify_password
-
+from src.services import auth as auth_service
 router = APIRouter(
     prefix="/auth",
     tags=["auth"]
@@ -16,12 +16,6 @@ router = APIRouter(
 
 @router.post("/login", response_model=ApiResponse[dto.UserResponse])
 def login(user: dto.LoginRequest, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
-    if not db_user:
-        raise BaseException(BaseErrorCode.NOT_FOUND, message="User not found")
-
-    if not verify_password(user.password, db_user.hashed_password):
-        raise BaseException(BaseErrorCode.UNAUTHORIZED, message="Invalid credentials")
-
-    return ApiResponse.success(data=db_user)
+    authenticated_user = auth_service.login(db, user)
+    return ApiResponse.success(data=authenticated_user, message="Login successful")
 

@@ -1,68 +1,47 @@
-from fastapi import APIRouter, status
-from src import dto, models
+from fastapi import APIRouter, status, Depends
 from sqlalchemy.orm import Session
-from fastapi import Depends
+from typing import Optional
+
+from src import dto
 from src.database import get_db
 from src.dto import ApiResponse
-from typing import Optional
-from src.errors.base_exception import BaseException
-from src.errors.base_error_code import BaseErrorCode
-
+from src.services import blog as blog_service # <--- THAY ĐỔI: Import service
+# from src.repositories import blog as blog_repository # <--- KHÔNG DÙNG REPO Ở ĐÂY
 
 router = APIRouter(
     prefix="/blog",
     tags=["blogs"]
 )
 
-@router.get("", response_model= ApiResponse[list[dto.BlogResponse]]
-            # , tags=["blogs"]
-            )
+@router.get("", response_model=ApiResponse[list[dto.BlogResponse]])
 def get_blogs(db: Session = Depends(get_db)):
-    blogs = db.query(models.Blog).all()
+    # Chỉ gọi service
+    blogs = blog_service.get_all(db)
     return ApiResponse.success(data=blogs)
-@router.post(""
-          , response_model= ApiResponse[dto.BlogResponse]
-          , status_code= status.HTTP_201_CREATED
-          , tags=["blogs"])
+
+@router.post("", 
+            response_model=ApiResponse[dto.BlogResponse], 
+            status_code=status.HTTP_201_CREATED)
 def create_blog(blog: dto.BlogCreateRequest, db: Session = Depends(get_db), user_id: int = 1):
-    new_blog = models.Blog(title=blog.title, content=blog.content, published=blog.published, user_id=user_id)
-    db.add(new_blog)
-    db.commit()
-    db.refresh(new_blog)
-    return ApiResponse.success(dto.BlogResponse.model_validate(new_blog))
+    # Chỉ gọi service, logic tạo model đã bị dời đi
+    new_blog = blog_service.create(blog, user_id, db)
+    return ApiResponse.success(data=new_blog, message="Blog created successfully")
 
-
-@router.get("/blog/{id}", response_model= ApiResponse[dto.BlogResponse], tags=["blogs"])
-def get_blog(id: int, db: Session = Depends(get_db), ):
-    blog = db.query(models.Blog).filter(models.Blog.id == id).first()
-    if(not blog):
-        # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-        #                     detail=f"Blog with id {id} not found")
-        raise BaseException(BaseErrorCode.NOT_FOUND, message=f"Blog with id {id} not found")
+# Sửa lỗi: Bỏ "/blog" vì đã có prefix="/blog"
+@router.get("/{id}", response_model=ApiResponse[dto.BlogResponse])
+def get_blog(id: int, db: Session = Depends(get_db)):
+    # Chỉ gọi service. Logic 'if not blog' đã bị dời đi
+    blog = blog_service.get_by_id(id, db)
     return ApiResponse.success(data=blog)
 
-
-@router.delete("/blog/{id}", response_model= ApiResponse[Optional[dto.BlogResponse]], tags=["blogs"])
-def delete_blog(id: int, db: Session = Depends(get_db), ):
-    blog = db.query(models.Blog).filter(models.Blog.id == id).first()
-    if(not blog):
-        # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-        #                     detail=f"Blog with id {id} not found")
-        raise BaseException(BaseErrorCode.NOT_FOUND, message=f"Blog with id {id} not found")
-    db.delete(blog)
-    db.commit()
+@router.delete("/{id}", response_model=ApiResponse[Optional[dto.BlogResponse]])
+def delete_blog(id: int, db: Session = Depends(get_db)):
+    # Chỉ gọi service. Logic 'if not blog' đã bị dời đi
+    blog_service.delete(id, db)
     return ApiResponse.success(message=f"Blog with id {id} deleted successfully")
 
-@router.put("/blog/{id}", response_model=ApiResponse[dto.BlogResponse], tags=["blogs"])
+@router.put("/{id}", response_model=ApiResponse[dto.BlogResponse])
 def update_blog(id: int, updated_blog: dto.BlogCreateRequest, db: Session = Depends(get_db)):
-    blog_query = db.query(models.Blog).filter(models.Blog.id == id)
-    existing_blog = blog_query.first()
-    if not existing_blog:
-        raise BaseException(BaseErrorCode.NOT_FOUND, message=f"Blog with id {id} not found")
-
-    # ✅ chuyển Pydantic → dict
-    blog_query.update(updated_blog.model_dump(), synchronize_session=False)
-    db.commit()
-
-    updated = blog_query.first()
-    return ApiResponse.success(data=dto.BlogResponse.model_validate(updated))
+    # Chỉ gọi service. Logic 'if not blog' đã bị dời đi
+    blog = blog_service.update(id, updated_blog, db)
+    return ApiResponse.success(data=blog, message="Blog updated successfully")

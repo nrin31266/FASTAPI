@@ -4,7 +4,9 @@ from enum import Enum
 
 class BaseErrorCode(Enum):
     # 🔹 Common errors
-    INTERNAL_SERVER_ERROR = (1000, "Lỗi máy chủ nội bộ", HTTPStatus.INTERNAL_SERVER_ERROR)
+    INTERNAL_SERVER_ERROR = (9999, "Lỗi máy chủ nội bộ", HTTPStatus.INTERNAL_SERVER_ERROR)
+    
+    
     INVALID_REQUEST = (1001, "Dữ liệu yêu cầu không hợp lệ", HTTPStatus.BAD_REQUEST)
     UNAUTHORIZED = (1002, "Không được phép", HTTPStatus.UNAUTHORIZED)
     NO_ACCESS = (1003, "Không có quyền truy cập", HTTPStatus.FORBIDDEN)

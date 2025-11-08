@@ -30,10 +30,12 @@ app = FastAPI()
 app.add_exception_handler(BaseException, base_exception_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
+
+
 # Include routers
 app.include_router(blog.router)
 app.include_router(user.router)
-app.include_router(auth.router)
+# app.include_router(auth.router)
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -48,30 +50,8 @@ app.add_middleware(
     allow_headers=["*"],  # tất cả header
 )
 
-# # ========== KEYCLOAK JWT AUTHENTICATION CONFIGURATION ==========
-
-# from src.auth.dependencies import get_current_user, require_role
-# from src.auth.models import User
 
 
-# # Routes bảo vệ bằng Keycloak JWT - GIỐNG HỆT Spring Security configuration
-# @app.get("/api/inventories")
-# async def get_inventories(user: User = Depends(get_current_user)):
-#     """Tương tự .requestMatchers("/api/inventories").authenticated()"""
-#     return {
-#         "message": f"Hello {user.username}",
-#         "roles": user.roles,
-#         "data": ["inventory1", "inventory2"]
-#     }
 
-# @app.get("/api/admin")
-# async def admin_only(user: User = Depends(require_role("ROLE_ADMIN"))):
-#     """Route yêu cầu ROLE_ADMIN"""
-#     return {"message": "Admin access granted"}
 
-# @app.get("/health")
-# async def health_check():
-#     return {"status": "healthy"}
 
-# # anyRequest().authenticated() - tất cả routes cần authentication
-# # (Bạn có thể áp dụng dependency cho tất cả routes nếu muốn)

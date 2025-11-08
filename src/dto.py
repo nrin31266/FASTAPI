@@ -25,7 +25,7 @@ class BlogResponse(BaseModel):
     title: str
     content: str
     published: bool
-    user_id: int
+    user_id: str
     
     creator: "User"
     class Config:
@@ -35,14 +35,16 @@ class Blog(BaseModel):
     title: str
     content: str
     published: bool = True
-    user_id: int  
+    user_id: str
     class Config:
         from_attributes = True
 
 class User(BaseModel):
-    id: int
-    username: str
+    keycloak_id: str
     email: str
+    first_name: str
+    last_name: str
+
     class Config:
         from_attributes = True
 
@@ -52,20 +54,18 @@ class BlogCreateRequest(BaseModel):
     published: bool = True
 
 class UserResponse(BaseModel):
-    id: int
-    username: str
+    keycloak_id: str
     email: str
+    first_name: str
+    last_name: str
     blogs : "List[Blog]"
 
     class Config:
         from_attributes = True
         
 
-class UserCreateRequest(BaseModel):
-    username: str
-    email: str
-    password: str
+
     
-class LoginRequest(BaseModel):
-    email: str
-    password: str
+# class LoginRequest(BaseModel):
+#     email: str
+#     password: str

@@ -8,17 +8,17 @@ class Blog(Base):
     title = Column(String)
     content = Column(String)
     published = Column(Boolean, default=True)
-    
-    user_id = Column(Integer, ForeignKey("users.id"))
-    
+
+    user_id = Column(String, ForeignKey("users.keycloak_id"))
+
     creator = relationship("User", back_populates="blogs")
     
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
+    keycloak_id = Column(String, unique=True, index=True, primary_key=True)
+    first_name = Column(String)
+    last_name = Column(String)
     
     blogs = relationship("Blog", back_populates="creator")
     

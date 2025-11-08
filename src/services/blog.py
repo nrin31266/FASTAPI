@@ -3,7 +3,6 @@ from src import dto, models
 from src.repositories import blog as blog_repository
 from src.errors.base_exception import BaseException
 from src.errors.base_error_code import BaseErrorCode
-import src.repositories.user as user_repository
 
 def get_all(db: Session) -> list[models.Blog]:
     """
@@ -23,21 +22,17 @@ def get_by_id(blog_id: int, db: Session) -> models.Blog:
         raise BaseException(BaseErrorCode.NOT_FOUND, message=f"Blog with id {blog_id} not found")
     return blog
 
-def create(blog_dto: dto.BlogCreateRequest, user_email: str, db: Session) -> models.Blog:
+def create(blog_dto: dto.BlogCreateRequest, keycloak_id: str, db: Session) -> models.Blog:
     """
     Service để tạo blog mới.
     Chứa logic tạo đối tượng model từ DTO.
     """
     # Logic tạo model nằm ở đây
-    user = user_repository.get_by_email(db, user_email)
-    if not user:
-        raise BaseException(BaseErrorCode.NOT_FOUND, message=f"User with email {user_email} not found")
-    
     new_blog = models.Blog(
         title=blog_dto.title, 
         content=blog_dto.content, 
         published=blog_dto.published, 
-        user_id=user.id
+        user_id=keycloak_id
     )
     
     # Gọi repo để lưu

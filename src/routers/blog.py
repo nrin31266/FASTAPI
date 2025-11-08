@@ -5,10 +5,11 @@ from typing import Optional
 from src import dto
 from src.database import get_db
 from src.dto import ApiResponse
-from src.services import blog as blog_service # <--- THAY ĐỔI: Import service
+from src.services import blog as blog_service, user as user_service # <--- THAY ĐỔI: Import service
 # from src.repositories import blog as blog_repository # <--- KHÔNG DÙNG REPO Ở ĐÂY
-from src.auth.dto import UserPrincipal
-from src.auth.oauth2 import get_current_user
+from src.keycloak_auth.dto import UserPrincipal
+from src.keycloak_auth.dependencies import get_current_user, require_roles
+
 
 
 router = APIRouter(
@@ -17,7 +18,7 @@ router = APIRouter(
 )
 
 @router.get("", response_model=ApiResponse[list[dto.BlogResponse]])
-def get_blogs(db: Session = Depends(get_db), current_user: UserPrincipal = Depends(get_current_user)):
+def get_blogs(db: Session = Depends(get_db), current_user: UserPrincipal = Depends(require_roles(["ROLE_ADMIN"]))):
     # Chỉ gọi service
     blogs = blog_service.get_all(db)
     
@@ -27,8 +28,10 @@ def get_blogs(db: Session = Depends(get_db), current_user: UserPrincipal = Depen
             response_model=ApiResponse[dto.BlogResponse], 
             status_code=status.HTTP_201_CREATED)
 def create_blog(blog: dto.BlogCreateRequest, db: Session = Depends(get_db), current_user: UserPrincipal = Depends(get_current_user)):
+    exitsting_user = user_service.get_or_create_user(db, current_user)
+    
     # Chỉ gọi service, logic tạo model đã bị dời đi
-    new_blog = blog_service.create(blog, current_user.email, db)
+    new_blog = blog_service.create(blog, exitsting_user.keycloak_id, db)
     return ApiResponse.success(data=new_blog, message="Blog created successfully")
 
 # Sửa lỗi: Bỏ "/blog" vì đã có prefix="/blog"

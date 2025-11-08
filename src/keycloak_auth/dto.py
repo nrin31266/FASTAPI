@@ -11,12 +11,10 @@
 from pydantic import BaseModel
 
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-# class TokenData(BaseModel):
-#     email: str | None = None
 
 class UserPrincipal(BaseModel):
     email: str 
     roles: list[str] = []
+    first_name: str | None = None
+    last_name: str | None = None
+    sub: str

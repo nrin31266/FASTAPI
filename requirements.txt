@@ -23,3 +23,5 @@ authlib==1.2.0
 
 # eureka client
 py-eureka-client==0.13.2
+
+confluent-kafka

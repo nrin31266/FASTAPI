@@ -22,3 +22,13 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=error.status.value,
         content={"code": error.code, "message": str(exc)},
     )
+# StarletteHTTPException
+async def http_exception_handler(request: Request, exc):
+    """Handler cho StarletteHTTPException"""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "code": exc.status_code,
+            "message": exc.detail,
+        },
+    )

@@ -24,6 +24,14 @@ def get_products(
     products = product_service.get_all_products(db)
     return ApiResponse.success(data=products)
 
+@router.get("/1", response_model=ApiResponse[List[dto.ProductResponse]])
+def get_products(
+    db: Session = Depends(get_db),
+    # current_user: UserPrincipal = Depends(require_roles(["ROLE_ADMIN"])),
+):
+    products = product_service.get_all_products(db)
+    return ApiResponse.success(data=products)
+
 
 @router.post(
     "",

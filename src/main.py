@@ -54,4 +54,28 @@ app.add_middleware(
 
 
 
+from src.eureka_client.eureka_config import register_with_eureka
+from contextlib import asynccontextmanager
+# Cấu hình Eureka client
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- Khi app START ---
+    await register_with_eureka()
+    print("✅ Registered with Eureka")
 
+    yield  # 👉 FastAPI chạy trong khoảng này
+
+    # --- Khi app SHUTDOWN ---
+    print("🧹 Shutting down FastAPI...")
+
+app = FastAPI(
+    title="FastAPI Service",
+    lifespan=lifespan,
+)
+@app.get("/health")
+def health():
+    return {"status": "UP"}
+
+@app.get("/info")
+def info():
+    return {"service": "fastapi-service", "version": "1.0.0"}

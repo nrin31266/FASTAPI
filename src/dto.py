@@ -66,6 +66,23 @@ class ProductCreationRequest(BaseModel):
     price: float
     product_id: str
 
+class MediaAudioResponse(BaseModel):
+    id: Optional[int]
+    input_url: str
+    input_type: str  # e.g., 'youtube, audio_file'
+    file_path: str
+    duration: int  # duration in seconds
+    title: str
+    created_at: Optional[DateTime]
+
+    class Config:
+        from_attributes = True
+    
+class MediaAudioCreateRequest(BaseModel):
+    input_url: str
+    input_type: str  # e.g., 'youtube, audio_file'
+    title: Optional[str] = None
+
 
 # class BlogResponse(BaseModel):
 #     id: int

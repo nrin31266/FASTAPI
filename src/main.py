@@ -18,14 +18,14 @@ from src.errors.base_exception_handler import (
     http_exception_handler
 )
 from src.errors.base_exception import BaseException
-from src.routers import product_router
+from src.routers import product_router, media_router
 from src.eureka_client.eureka_config import (
     register_with_eureka,
 )  # Đảm bảo import này đúng
 from src.kafka.consumer import start_kafka_consumers
 from src.kafka.producer import periodic_flush, producer
 # StarletteHTTPException
-from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exceptions import HTTPException
 
 import asyncio
 
@@ -40,7 +40,7 @@ logging.basicConfig(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- Khi app START ---
-    await register_with_eureka()
+    # await register_with_eureka()
     print("✅ Registered with Eureka")
     # asyncio.create_task(start_kafka_consumers())
     # print("📡 Kafka consumers started")
@@ -81,14 +81,16 @@ app.add_middleware(
 
 # --- 6. Include các Routers ---
 app.include_router(product_router.router)
+app.include_router(media_router.router)
 # app.include_router(blog.router)
 # app.include_router(user.router)
 # app.include_router(auth.router)
 
 # --- 5. Đăng ký Exception Handlers ---
+app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(BaseException, base_exception_handler)
 app.add_exception_handler(Exception, global_exception_handler)
-app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+
 
 # --- 7. Tạo các bảng CSDL ---
 models.Base.metadata.create_all(bind=engine)

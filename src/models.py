@@ -43,6 +43,16 @@ class ReservedOrder(Base):
     quantity = Column(Integer, nullable=False)
 
     product = relationship("Product")
+    
+class MediaAudio(Base):
+    __tablename__ = "media_audios"
+    id = Column(Integer, primary_key=True, index=True)
+    input_url = Column(String, unique=True, index=True, nullable=False)
+    input_type = Column(String, nullable=False)  # e.g., 'youtube, audio_file'
+    file_path = Column(String, nullable=False)
+    duration = Column(Integer, nullable=False)  # duration in seconds
+    title = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.now)
 
 
 # class Blog(Base):

@@ -25,3 +25,8 @@ authlib==1.2.0
 py-eureka-client==0.13.2
 
 confluent-kafka
+
+# checkout: cloudinary
+cloudinary
+
+yt-dlp

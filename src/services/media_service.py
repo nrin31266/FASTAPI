@@ -6,6 +6,13 @@ from src.cloud  import cloud_service
 import yt_dlp
 import os
 from datetime import datetime
+import logging as logger
+
+# --- Import mới cho download_audio_file ---
+import requests
+import uuid  # Để tạo tên file an toàn
+import mimetypes # Để đoán đuôi file
+from urllib.parse import urlparse # Để lấy tên file gốc từ URL
 
 # ==========================================================
 # PHẦN LẤY THÔNG TIN (INFO EXTRACTOR)
@@ -57,43 +64,77 @@ YDL_DOWNLOAD_OPTS = {
 ydl_downloader = yt_dlp.YoutubeDL(YDL_DOWNLOAD_OPTS)
 
 
+
+# ==========================================================
+# CẤU HÌNH UPLOAD VÀ GIỚI HẠN
+# ==========================================================
+# Thư mục cơ sở trên Cloudinary
+CLOUDINARY_BASE_FOLDER = "fastapi/test1/audio_files" 
+# Giới hạn kích thước file tải về từ URL (ví dụ: 50MB)
+MAX_AUDIO_SIZE_BYTES = 50 * 1024 * 1024 # 50MB
+
 def download_audio(rq: dto.MediaAudioCreateRequest, db: Session) -> dto.MediaAudioResponse:
-    # Giả sử bạn có logic để tải audio từ YouTube hoặc xử lý file audio ở đây
-    # Ví dụ đơn giản: tạo một bản ghi MediaAudio trong database
-    if(rq.input_type not in ['youtube', 'audio_file']):
-        raise BaseException(BaseErrorCode.BAD_REQUEST, message="Invalid input type")
-    
-    process_info = None
-    
-    if(rq.input_type == 'youtube'):
-        process_info = download_youtube_audio(rq, db)
-    elif(rq.input_type == 'audio_file'):
-        process_info = download_audio_file(rq, db)
+
+    start_time = datetime.now()
+    try:
+        # Giả sử bạn có logic để tải audio từ YouTube hoặc xử lý file audio ở đây
+        # Ví dụ đơn giản: tạo một bản ghi MediaAudio trong database
+        if(rq.input_type not in ['youtube', 'audio_file']):
+            raise BaseException(BaseErrorCode.BAD_REQUEST, message="Invalid input type")
         
-    media_audio = models.MediaAudio(
-        input_url = rq.input_url,
-        input_type = rq.input_type,
-        duration = process_info['duration'] if process_info else 0,
-        title = process_info['title'] if process_info else '',
-    )
-    # Upload file to Cloudinary
-    file_path = process_info['file_path']
-    video_id = os.path.splitext(os.path.basename(file_path))[0]
-    public_id = f"fastapi/test1/audio_files/" + video_id + "_" + datetime.now().strftime("%Y%m%d%H%M%S")
+        process_info = None
+        
+        if(rq.input_type == 'youtube'):
+            process_info = download_youtube_audio(rq, db)
+        elif(rq.input_type == 'audio_file'):
+            process_info = download_audio_file(rq, db)
+            
+        
+        # Upload file to Cloudinary
+        file_path = process_info['file_path']
+ 
+        # Lấy tên file an toàn (video_id hoặc UUID) từ file_path
+        safe_filename = os.path.splitext(os.path.basename(file_path))[0]
+        public_id = f"{CLOUDINARY_BASE_FOLDER}/{safe_filename}"
 
-    upload_result = upload_audio_file(file_path, public_id)
-    if not upload_result:
-        raise BaseException(BaseErrorCode.INTERNAL_SERVER_ERROR, message="Upload file lên Cloudinary thất bại.")
-    print(f"File đã được upload lên Cloudinary: {upload_result}")
-    
-    media_audio.file_path = upload_result
+        logger.info(f"Đang upload file {file_path} lên cloud as {public_id}...")
+        upload_result = upload_audio_file(file_path, public_id)
+        if not upload_result:
+            raise BaseException(BaseErrorCode.INTERNAL_SERVER_ERROR, message="Upload file lên Cloudinary thất bại.")
+        logger.info(f"File đã được upload lên Cloudinary: {upload_result}")
 
-    db.add(media_audio)
-    db.commit()
-    db.refresh(media_audio)
-    print("Đã lưu thông tin MediaAudio vào database.")
-    # Sau khi lưu xong, trả về DTO 
-    return dto.MediaAudioResponse.model_validate(media_audio)
+        
+        
+        media_audio = models.MediaAudio(
+            input_url = rq.input_url,
+            input_type = rq.input_type,
+            duration = process_info['duration'] if process_info else 0,
+            title = process_info['title'] if process_info else '',
+            file_path = upload_result,
+        )
+
+        db.add(media_audio)
+        db.commit()
+        db.refresh(media_audio)
+        print("Đã lưu thông tin MediaAudio vào database.")
+        # Sau khi lưu xong, trả về DTO 
+        return dto.MediaAudioResponse.model_validate(media_audio)
+    except BaseException as be:
+        raise be
+    except Exception as e:
+        raise e
+    finally:
+        # --- BƯỚC 5: DỌN DẸP (LUÔN LUÔN CHẠY) ---
+        # Đảm bảo file tạm luôn bị xóa sau khi xử lý (dù thành công hay lỗi)
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                logger.info(f"Đã xóa file tạm: {file_path}")
+            except OSError as e:
+                # Ghi lại lỗi nhưng không ném ra, vì lỗi chính (nếu có) đã ở trên
+                logger.error(f"LỖI: Không thể xóa file tạm {file_path}. Lỗi: {e}")
+        
+
 
 def download_youtube_audio(rq: dto.MediaAudioCreateRequest, db: Session):
     print("Đang lấy thông tin video...")
@@ -142,9 +183,88 @@ def download_youtube_audio(rq: dto.MediaAudioCreateRequest, db: Session):
         raise BaseException(BaseErrorCode.INTERNAL_SERVER_ERROR, message=f"Lỗi hệ thống: {str(e)}")
 
 def download_audio_file(rq: dto.MediaAudioCreateRequest, db: Session):
+    """
+    Tải file audio từ một URL bất kỳ (phiên bản an toàn).
+    """
+    url_audio = rq.input_url
+    logger.info(f"Bắt đầu xử lý file audio từ URL: {url_audio}")
+    try:
+        # --- BƯỚC 1: KIỂM TRA HEADERS (VALIDATION) ---
+        # Gửi HEAD request để kiểm tra trước khi tải
+        # timeout=5: Chờ tối đa 5 giây
+        # allow_redirects=True: Cho phép theo dõi chuyển hướng (vd: http -> https)
+        # with để tự động đóng kết nối sau khi xong
+        with requests.head(url_audio, allow_redirects=True, timeout=5) as head_resp:
+            head_resp.raise_for_status()  # Ném lỗi nếu status không phải 2xx
+            
+            # 1.1. Kiểm tra loại file (Content-Type)
+            content_type = head_resp.headers.get('Content-Type', '').lower()
+            if not content_type.startswith('audio/'):
+                logger.warning(f"URL bị từ chối: Content-Type không phải audio ({content_type})")
+                raise BaseException(BaseErrorCode.BAD_REQUEST, message=f"URL không trỏ đến file audio (phát hiện: {content_type})")
+            
+            # 1.2. Kiểm tra dung lượng (Content-Length)
+            content_length = head_resp.headers.get('Content-Length')
+            if content_length and int(content_length) > MAX_AUDIO_SIZE_BYTES:
+                file_size_mb = int(content_length) / 1024 / 1024
+                limit_mb = MAX_AUDIO_SIZE_BYTES / 1024 / 1024
+                logger.warning(f"URL bị từ chối: File quá lớn ({file_size_mb:.2f} MB)")
+                raise BaseException(BaseErrorCode.BAD_REQUEST, message=f"File audio quá lớn ({file_size_mb:.2f} MB). Giới hạn: {limit_mb} MB")
+            # --- BƯỚC 2: TẠO TÊN FILE AN TOÀN ---
+            # Lấy đuôi file từ content-type (ví dụ: 'audio/mpeg' -> '.mp3')
+            ext = mimetypes.guess_extension(content_type) or '.dat' # Fallback nếu không đoán được
+            # Tạo tên file duy nhất bằng UUID để tránh trùng lặp
+            filename = f"{uuid.uuid4()}{ext}"
+            save_path = os.path.join(AUDIO_SAVE_PATH, filename)
+            
+        # --- BƯỚC 3: TẢI FILE (STREAM) ---
+        logger.info(f"Đang tải file về {save_path}...")
+        # timeout=60: Cho phép tối đa 60 giây để tải
+        with requests.get(url_audio, stream=True, timeout=60) as r_download:
+            r_download.raise_for_status()
+            with open(save_path, 'wb') as f:
+                for chunk in r_download.iter_content(chunk_size=8192): # Tải từng cục 8KB
+                    if chunk:
+                        f.write(chunk)
+         # --- BƯỚC 4: LẤY THÔNG TIN (DURATION/TITLE) ---
+        # Lấy tên file gốc (an toàn) từ URL để làm 'title'
+        # Ví dụ: http://.../my song.mp3?query=1 -> my song.mp3
+        original_filename = os.path.basename(urlparse(url_audio).path)
+        if not original_filename:
+             original_filename = filename # Fallback về tên file UUID
 
-    return None
+        # Lấy duration: Cần FFprobe/FFmpeg (giống yt-dlp). 
+        # Đây là một bước phức tạp, tốn thời gian. Tạm thời để 0.
+        # Nếu bạn CẦN duration, bạn phải gọi 1 lệnh system os.system(f"ffprobe ...")
+        duration_sec = 0
+        
+        logger.info(f"Đã tải file audio thành công: {save_path}")
+        return {
+            "file_path": save_path,
+            "title": original_filename,
+            "duration": duration_sec
+        }
+    except requests.exceptions.Timeout:
+        logger.error(f"Lỗi Timeout khi tải file: {url_audio}")
+        raise BaseException(BaseErrorCode.BAD_REQUEST, message=f"Tải file thất bại: Hết thời gian chờ (Timeout)")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Lỗi khi tải file audio từ URL: {e}")
+        raise BaseException(BaseErrorCode.BAD_REQUEST, message=f"Lỗi tải file audio từ URL: {str(e)}")
+    except BaseException: # Ném lại lỗi BaseException (ví dụ: file quá lớn)
+        raise
+    except Exception as e:
+        logger.error(f"Lỗi không xác định khi tải file: {e}", exc_info=True)
+        raise BaseException(BaseErrorCode.INTERNAL_SERVER_ERROR, message=f"Lỗi hệ thống khi xử lý file: {str(e)}")
+
+
 
 def upload_audio_file(file_path: str, public_id: str):
 
     return cloud_service.upload_file(file_path, public_id, resource_type="video")  # audio được coi như video
+
+def remove_local_file(file_path: str):
+    try:
+        os.remove(file_path)
+        print(f"Đã xóa file tạm thời: {file_path}")
+    except OSError as e:
+        print(f"Lỗi khi xóa file {file_path}: {e.strerror}")

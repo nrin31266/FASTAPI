@@ -2,8 +2,10 @@ from sqlalchemy.orm import Session
 from src import dto, models
 from src.errors.base_exception import BaseException
 from src.errors.base_error_code import BaseErrorCode
+from src.cloud  import cloud_service
 import yt_dlp
 import os
+from datetime import datetime
 
 # ==========================================================
 # PHẦN LẤY THÔNG TIN (INFO EXTRACTOR)
@@ -71,15 +73,26 @@ def download_audio(rq: dto.MediaAudioCreateRequest, db: Session) -> dto.MediaAud
     media_audio = models.MediaAudio(
         input_url = rq.input_url,
         input_type = rq.input_type,
-        file_path = process_info['file_path'] if process_info else '',
         duration = process_info['duration'] if process_info else 0,
         title = process_info['title'] if process_info else '',
     )
+    # Upload file to Cloudinary
+    file_path = process_info['file_path']
+    video_id = os.path.splitext(os.path.basename(file_path))[0]
+    public_id = f"fastapi/test1/audio_files/" + video_id + "_" + datetime.now().strftime("%Y%m%d%H%M%S")
+
+    upload_result = upload_audio_file(file_path, public_id)
+    if not upload_result:
+        raise BaseException(BaseErrorCode.INTERNAL_SERVER_ERROR, message="Upload file lên Cloudinary thất bại.")
+    print(f"File đã được upload lên Cloudinary: {upload_result}")
     
+    media_audio.file_path = upload_result
+
     db.add(media_audio)
     db.commit()
     db.refresh(media_audio)
-
+    print("Đã lưu thông tin MediaAudio vào database.")
+    # Sau khi lưu xong, trả về DTO 
     return dto.MediaAudioResponse.model_validate(media_audio)
 
 def download_youtube_audio(rq: dto.MediaAudioCreateRequest, db: Session):
@@ -132,6 +145,6 @@ def download_audio_file(rq: dto.MediaAudioCreateRequest, db: Session):
 
     return None
 
-def upload_audio_file():
+def upload_audio_file(file_path: str, public_id: str):
 
-    return None
+    return cloud_service.upload_file(file_path, public_id, resource_type="video")  # audio được coi như video

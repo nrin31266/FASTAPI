@@ -47,7 +47,7 @@ class ReservedOrder(Base):
 class MediaAudio(Base):
     __tablename__ = "media_audios"
     id = Column(Integer, primary_key=True, index=True)
-    input_url = Column(String, unique=True, index=True, nullable=False)
+    input_url = Column(String, nullable=False)
     input_type = Column(String, nullable=False)  # e.g., 'youtube, audio_file'
     file_path = Column(String, nullable=False)
     duration = Column(Integer, nullable=False)  # duration in seconds

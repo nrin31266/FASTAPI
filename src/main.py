@@ -1,5 +1,4 @@
 # main.py
-
 import logging
 from typing import Optional
 from fastapi import FastAPI, Depends, status, Response, HTTPException
@@ -28,6 +27,8 @@ from src.kafka.producer import periodic_flush, producer
 from fastapi.exceptions import HTTPException
 
 import asyncio
+# cloud
+from src.cloud.config import setup_cloudinary
 
 # --- 1. Cấu hình logging ---
 logging.basicConfig(
@@ -40,6 +41,10 @@ logging.basicConfig(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- Khi app START ---
+    
+    # --- GỌI CẤU HÌNH CLOUDINARY Ở ĐÂY ---
+    setup_cloudinary()
+    
     # await register_with_eureka()
     print("✅ Registered with Eureka")
     # asyncio.create_task(start_kafka_consumers())

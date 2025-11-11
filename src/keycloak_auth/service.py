@@ -1,7 +1,7 @@
 from jose import jwt, JWTError
 from authlib.jose.rfc7517.jwk import JsonWebKey
 from fastapi import HTTPException, status
-from src.keycloak_auth.config import keycloak_config
+from src.keycloak_auth.config import KeycloakConfig
 from src.keycloak_auth import dto as auth_dto
 import logging
 import requests
@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 _jwks = None
 
 def get_jwks():
+    keycloak_config = KeycloakConfig()
+    
     """Lấy JWKS từ Keycloak"""
     global _jwks
     if _jwks is None:

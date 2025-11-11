@@ -2,11 +2,11 @@ from pydantic_settings import BaseSettings
 
 
 class KeycloakConfig(BaseSettings):
-    realm: str = "demo-realm"
-    issuer_uri: str = f"http://localhost:8080/realms/{realm}"
-
-    class Config:
-        env_file = ".env"
+    issuer_uri: str 
 
 
-keycloak_config = KeycloakConfig()
+    model_config = {
+        "env_file": ".env",
+        "env_prefix": "KEYCLOAK_",
+        "extra": "ignore"
+    }

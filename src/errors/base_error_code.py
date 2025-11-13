@@ -13,6 +13,7 @@ class BaseErrorCode(Enum):
     RESOURCE_NOT_FOUND = (1004, "Không tìm thấy tài nguyên", HTTPStatus.NOT_FOUND)
     NOT_FOUND = (1005, "Không tìm thấy", HTTPStatus.NOT_FOUND)
     BAD_REQUEST = (1006, "Yêu cầu không hợp lệ", HTTPStatus.BAD_REQUEST)
+    INVALID_AUDIO_FILE = (1007, "Tệp âm thanh không hợp lệ", HTTPStatus.BAD_REQUEST)
 
     def __init__(self, code: int, message: str, status: HTTPStatus):
         self.code = code

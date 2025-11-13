@@ -81,7 +81,14 @@ class MediaAudioResponse(BaseModel):
 class MediaAudioCreateRequest(BaseModel):
     input_url: str
     input_type: str  # e.g., 'youtube, audio_file'
-    title: Optional[str] = None
+    # title: Optional[str] = None
+    
+class AudioInfo(BaseModel):
+    file_path: str
+    duration: int  # duration in seconds
+    title: str
+    class Config:
+        from_attributes = True
 
 
 # class BlogResponse(BaseModel):

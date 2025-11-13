@@ -17,7 +17,7 @@ from src.errors.base_exception_handler import (
     http_exception_handler
 )
 from src.errors.base_exception import BaseException
-from src.routers import product_router, media_router
+from src.routers import product_router, media_router, speech_to_text
 from src.eureka_client.eureka_config import (
     register_with_eureka,
 )  # Đảm bảo import này đúng
@@ -36,6 +36,8 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
 
+import gc
+import torch
 
 # --- 2. Định nghĩa Lifespan (cho Eureka) ---
 @asynccontextmanager
@@ -66,6 +68,31 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
     producer.flush(10)  # Flush cuối cùng
+    
+    
+    # 🧹 DỌN CLEANUP WHISPERX + PYTORCH GPU
+    print("🧽 Cleaning WhisperX & GPU memory...")
+    from src.services.speech_to_text_service import whisper_model
+
+    try:
+        del whisper_model
+    except:
+        pass
+    
+    # Xóa luôn các model alignment nếu có (trong RAM/GPU)
+    try:
+        from whisperx import alignment
+        alignment.alignment_model = None
+    except:
+        pass
+
+    gc.collect()
+
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
+
+    print("✅ WhisperX model unloaded & GPU memory cleaned.")
 
 
 # --- 3. Tạo FastAPI App (CHỈ MỘT LẦN) ---
@@ -87,6 +114,7 @@ app.add_middleware(
 # --- 6. Include các Routers ---
 app.include_router(product_router.router)
 app.include_router(media_router.router)
+app.include_router(speech_to_text.router)
 # app.include_router(blog.router)
 # app.include_router(user.router)
 # app.include_router(auth.router)

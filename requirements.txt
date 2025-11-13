@@ -30,3 +30,7 @@ confluent-kafka
 cloudinary
 
 yt-dlp
+
+whisperx==3.7.4
+
+librosa
